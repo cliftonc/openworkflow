@@ -57,6 +57,30 @@ jobs:
       - uses: jdx/mise-action@v5.0.1
       - run: npm ci
       - run: bun run ci:bun
+  # The Drizzle backend supports drizzle-orm >=0.45 <2. The main jobs run the
+  # 0.x dev dependency; this one builds and tests against the 1.0 release
+  # candidate.
+  ci-drizzle-next:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v5.0.1
+      - run: npm ci
+      - run: npm install --no-save -w packages/openworkflow drizzle-orm@rc drizzle-kit@rc
+      - run: npm run build
+      - run: npx vitest run packages/openworkflow/drizzle
   # https://commitlint.js.org/guides/ci-setup.html
   commitlint:
     runs-on: ubuntu-latest

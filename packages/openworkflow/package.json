@@ -34,6 +34,10 @@
       "types": "./dist/internal.d.ts",
       "default": "./dist/internal.js"
     },
+    "./drizzle": {
+      "types": "./dist/drizzle.d.ts",
+      "default": "./dist/drizzle.js"
+    },
     "./postgres": {
       "types": "./dist/postgres.d.ts",
       "default": "./dist/postgres.js"
@@ -56,9 +60,12 @@
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {
+    "@libsql/client": "^0.18.0",
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/sdk-trace-node": "^2.11.0",
     "arktype": "^2.2.7",
+    "drizzle-kit": "^0.31.11",
+    "drizzle-orm": "^0.45.4",
     "valibot": "^1.5.0",
     "vitest": "^5.0.0",
     "yup": "^1.7.1",
@@ -66,10 +73,14 @@
   },
   "peerDependencies": {
     "@opentelemetry/api": "1",
+    "drizzle-orm": ">=0.45.0 <2",
     "postgres": "^3.4.9"
   },
   "peerDependenciesMeta": {
     "@opentelemetry/api": {
+      "optional": true
+    },
+    "drizzle-orm": {
       "optional": true
     },
     "postgres": {

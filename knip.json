@@ -11,6 +11,7 @@
     "@openworkflow/cli",
     "@tanstack/react-router-ssr-query",
     "@tanstack/router-plugin",
+    "drizzle-kit",
     "openworkflow",
     "postgres",
     "web-vitals"

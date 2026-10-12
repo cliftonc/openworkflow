@@ -1,4 +1,3 @@
-import type { JsonValue } from "../core/json.js";
 import {
   MIGRATION_WAIT_TIMEOUT_MS,
   pendingStatements,
@@ -305,26 +304,6 @@ export function addMilliseconds(date: string, ms: number): string {
   const d = new Date(date);
   d.setMilliseconds(d.getMilliseconds() + ms);
   return d.toISOString();
-}
-
-/**
- * Helper to serialize JSON for SQLite storage
- * @param value - Value to serialize
- * @returns JSON string or null
- */
-// oxlint-disable-next-line anti-slop/no-unknown-parameters -- JSON.stringify owns the serialization of arbitrary input
-export function toJSON(value: unknown): string | null {
-  return value === null || value === undefined ? null : JSON.stringify(value);
-}
-
-/**
- * Helper to deserialize JSON from SQLite storage
- * @param value - JSON string or null
- * @returns Parsed value
- */
-export function fromJSON(value: string | null): JsonValue {
-  // safety: JSON.parse returns only JSON values when no reviver is supplied.
-  return value === null ? null : (JSON.parse(value) as JsonValue);
 }
 
 /**

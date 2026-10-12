@@ -32,7 +32,7 @@ import {
   decodeListCursor,
 } from "../core/cursor.js";
 import { requireRow, wrapError } from "../core/error.js";
-import { JsonValue } from "../core/json.js";
+import { fromJSON, JsonValue, toJSON } from "../core/json.js";
 import { prepareWorkflowRerun } from "../core/rerun.js";
 import { StepAttempt } from "../core/step-attempt.js";
 import { computeFailedWorkflowRunUpdate } from "../core/workflow-definition.js";
@@ -47,8 +47,6 @@ import {
   generateUUID,
   now,
   addMilliseconds,
-  toJSON,
-  fromJSON,
   toISO,
   fromISO,
 } from "./sqlite.js";

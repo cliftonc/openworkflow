@@ -1,0 +1,159 @@
+---
+title: Drizzle Backend
+description: Store workflows in an existing Drizzle ORM database on SQLite or PostgreSQL, using your own driver and migrations
+---
+
+The Drizzle backend stores workflows in a database your application already
+manages with [Drizzle ORM](https://orm.drizzle.team). It uses your Drizzle
+connection and driver, and the tables go into your own migrations, so you don't
+need a second connection pool or migration system.
+
+It supports SQLite through async drivers such as libsql, and PostgreSQL through
+any Drizzle driver (postgres.js, node-postgres, Neon, …). Requires
+`drizzle-orm` 0.45 or later.
+
+## Add the Tables to Your Schema
+
+Create the tables with `createSqliteTables()` or `createPgTables()` and export
+them from your Drizzle schema. drizzle-kit then includes them in the migrations
+it generates for your app:
+
+```ts
+// db/schema.ts
+import { createSqliteTables } from "openworkflow/drizzle";
+
+export const {
+  workflowRuns: owWorkflowRuns,
+  stepAttempts: owStepAttempts,
+  workflowSignals: owWorkflowSignals,
+} = createSqliteTables({ prefix: "ow_" });
+```
+
+Then generate and apply a migration as usual:
+
+```bash
+npx drizzle-kit generate
+npx drizzle-kit migrate
+```
+
+The tables match the [SQLite](/docs/sqlite) and [PostgreSQL](/docs/postgres)
+backends column for column, so an existing OpenWorkflow database can move to
+the Drizzle backend without a data migration. The backend never creates or
+migrates tables itself.
+
+## Setup
+
+```ts
+import * as schema from "./db/schema";
+import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
+import { OpenWorkflow } from "openworkflow";
+import { BackendDrizzleSqlite } from "openworkflow/drizzle";
+
+const db = drizzle({ client: createClient({ url: "file:./app.db" }), schema });
+
+const backend = new BackendDrizzleSqlite({
+  db,
+  tables: {
+    workflowRuns: schema.owWorkflowRuns,
+    stepAttempts: schema.owStepAttempts,
+    workflowSignals: schema.owWorkflowSignals,
+  },
+});
+const ow = new OpenWorkflow({ backend });
+```
+
+For PostgreSQL, use `createPgTables()` and `BackendDrizzlePg`:
+
+```ts
+// db/schema.ts
+import { createPgTables } from "openworkflow/drizzle";
+
+export const {
+  workflowRuns: owWorkflowRuns,
+  stepAttempts: owStepAttempts,
+  workflowSignals: owWorkflowSignals,
+} = createPgTables({ prefix: "ow_" });
+```
+
+```ts
+import { drizzle } from "drizzle-orm/node-postgres";
+import { BackendDrizzlePg } from "openworkflow/drizzle";
+
+const backend = new BackendDrizzlePg({
+  db: drizzle(process.env.DATABASE_URL!),
+  tables: {
+    workflowRuns: schema.owWorkflowRuns,
+    stepAttempts: schema.owStepAttempts,
+    workflowSignals: schema.owWorkflowSignals,
+  },
+});
+```
+
+## Configuration Options
+
+```ts
+createSqliteTables({
+  // Prefix for table, index, and constraint names (default: none)
+  prefix: "ow_",
+});
+
+createPgTables({
+  prefix: "ow_",
+  // Postgres schema for the tables (default: the connection's search path)
+  schema: "workflows",
+});
+
+new BackendDrizzleSqlite({
+  db,
+  tables,
+  // Namespace for multi-tenant isolation (default: "default")
+  namespaceId: "production",
+});
+```
+
+Use a prefix when your database already has tables named `workflow_runs`,
+`step_attempts`, or `workflow_signals`.
+
+When you set `schema`, also export the returned `schema` object from your
+Drizzle schema, so drizzle-kit creates the Postgres schema instead of dropping
+it:
+
+```ts
+export const {
+  workflowRuns: owWorkflowRuns,
+  stepAttempts: owStepAttempts,
+  workflowSignals: owWorkflowSignals,
+  schema: owSchema,
+} = createPgTables({ schema: "workflows" });
+```
+
+## Connections
+
+The backend uses the database you pass in and never opens or closes
+connections. `backend.stop()` leaves your connection open; close it yourself
+when your app shuts down.
+
+## SQLite Concurrency
+
+Within a process, the SQLite backend runs its operations one at a time, using
+immediate transactions where several statements must apply together. This
+matches the [SQLite backend](/docs/sqlite), whose driver is synchronous. If
+other code in your app writes to the same database file through other
+connections, serialize those writes in your app too.
+
+## Indexes on Large Tables
+
+The PostgreSQL backend's own migrations build indexes with
+`CREATE INDEX CONCURRENTLY`. drizzle-kit runs migrations in a transaction, which
+doesn't allow that, so the generated migration builds them normally. If you're
+adding the tables to a database that's already under heavy load, you can edit
+the generated migration.
+
+## Known Differences
+
+With drizzle-kit 0.31, the SQLite `step_attempts_signal_wait_idx` index uses
+`"context" ->> '$.signal'` instead of `json_extract("context", '$.signal')`,
+because drizzle-kit 0.31 can't generate an index on `json_extract`. The two
+expressions return the same value, and the Drizzle backend queries with the one
+its index uses.

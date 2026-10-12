@@ -142,6 +142,29 @@ matches the [SQLite backend](/docs/sqlite), whose driver is synchronous. If
 other code in your app writes to the same database file through other
 connections, serialize those writes in your app too.
 
+## Checking Your Driver
+
+OpenWorkflow's CI runs the Drizzle backend on libsql and postgres.js. To check
+another driver, run the same backend test suite in your own tests with
+`openworkflow/testing` (requires Vitest):
+
+```ts
+import { db, tables } from "./db";
+import { BackendDrizzlePg } from "openworkflow/drizzle";
+import { testBackend } from "openworkflow/testing";
+
+testBackend({
+  setup: async () =>
+    new BackendDrizzlePg({ db, tables, namespaceId: crypto.randomUUID() }),
+  teardown: async (backend) => {
+    await backend.stop();
+  },
+});
+```
+
+Each `setup()` should return a backend on its own namespace, so tests don't see
+each other's runs. The same suite works for any custom `Backend`.
+
 ## Indexes on Large Tables
 
 The PostgreSQL backend's own migrations build indexes with
